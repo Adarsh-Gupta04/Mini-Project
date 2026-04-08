@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Stock Tracker</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 24px;
+    }
+
+    h1 { color: #38bdf8; margin-bottom: 20px; font-size: 24px; }
+
+    /* SEARCH */
+    .search-bar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+    .search-bar input {
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      background: #1e293b;
+      color: white;
+      font-size: 14px;
+      width: 220px;
+    }
+    .search-bar button {
+      padding: 10px 20px;
+      background: #38bdf8;
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    /* STOCK CARDS */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .card {
+      background: #1e293b;
+      border-radius: 10px;
+      padding: 16px;
+      border: 1px solid #334155;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .card:hover { border-color: #38bdf8; }
+    .card.active { border-color: #38bdf8; background: #1a3045; }
+
+    .card-sym  { font-size: 18px; font-weight: bold; }
+    .card-name { font-size: 12px; color: #94a3b8; margin: 4px 0 10px; }
+    .card-price { font-size: 20px; font-weight: bold; }
+    .card-change { font-size: 13px; margin-top: 4px; }
+    .up   { color: #4ade80; }
+    .down { color: #f87171; }
+
+    /* WATCHLIST */
+    h2 { margin-bottom: 12px; font-size: 18px; color: #94a3b8; }
+
+    .watchlist {
+      background: #1e293b;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 32px;
+      border: 1px solid #334155;
+    }
+
+    .wl-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid #334155;
+      font-size: 14px;
+    }
+    .wl-item:last-child { border-bottom: none; }
+
+    .remove-btn {
+      background: none;
+      border: 1px solid #f87171;
+      color: #f87171;
+      border-radius: 6px;
+      padding: 3px 10px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .add-btn {
+      margin-top: 12px;
+      background: none;
+      border: 1px solid #38bdf8;
+      color: #38bdf8;
+      padding: 7px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    /* P&L TRACKER */
+    .pl-section { background: #1e293b; border-radius: 10px; padding: 16px; border: 1px solid #334155; }
+
+    .pl-inputs {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .pl-inputs input {
+      padding: 9px 12px;
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: white;
+      border-radius: 8px;
+      font-size: 13px;
+      width: 120px;
+    }
+    .pl-inputs button {
+      padding: 9px 18px;
+      background: #4ade80;
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th { text-align: left; padding: 8px; color: #94a3b8; border-bottom: 1px solid #334155; }
+    td { padding: 10px 8px; border-bottom: 1px solid #1e293b; }
+
+    .empty { color: #94a3b8; font-size: 13px; padding: 12px 0; }
+  </style>
+</head>
+<body>
+
+<h1>📈 Stock Tracker</h1>
+
+<!-- SEARCH -->
+<div class="search-bar">
+  <input id="searchInput" placeholder="Search: AAPL, TSLA..." oninput="filterCards()" />
+  <button onclick="filterCards()">Search</button>
+</div>
+
+<!-- STOCK CARDS -->
+<div class="cards" id="cards"></div>
+
+<!-- WATCHLIST -->
+<h2>⭐ My Watchlist</h2>
+<div class="watchlist">
+  <div id="watchlistItems"><p class="empty">No stocks added yet.</p></div>
+  <button class="add-btn" onclick="addToWatchlist()">+ Add Selected Stock</button>
+</div>
+
+<!-- P&L TRACKER -->
+<h2>💰 Profit & Loss Tracker</h2>
+<div class="pl-section">
+  <div class="pl-inputs">
+    <input id="plSym" placeholder="Click a stock card..." readonly style="cursor:pointer; background:#1a3045; color:#38bdf8;" />
+    <input id="plQty"   placeholder="Qty" type="number" />
+    <input id="plCost"  placeholder="Buy Price ($)" type="number" />
+    <button onclick="addHolding()">Add</button>
+  </div>
+  <table>
+    <thead><tr><th>Symbol</th><th>Qty</th><th>Buy</th><th>Now</th><th>P&L</th></tr></thead>
+    <tbody id="plBody"><tr><td colspan="5" class="empty">No holdings added.</td></tr></tbody>
+  </table>
+</div>
+
+<script>
+  // ── STOCK DATA (simulated prices) ─────────────────────────────
+  const stocks = [
+    { sym: "AAPL", name: "Apple",    price: 189.30 },
+    { sym: "TSLA", name: "Tesla",    price: 175.20 },
+    { sym: "MSFT", name: "Microsoft",price: 415.00 },
+    { sym: "GOOGL",name: "Google",   price: 171.50 },
+    { sym: "NVDA", name: "NVIDIA",   price: 875.00 },
+    { sym: "AMZN", name: "Amazon",   price: 185.40 },
+    { sym: "META", name: "Meta",     price: 502.00 },
+    { sym: "NFLX", name: "Netflix",  price: 628.90 },
+  ];
+
+  // Add random % change to each stock
+  stocks.forEach(s => {
+    s.change = +((Math.random() * 6 - 3).toFixed(2)); // -3% to +3%
+    s.price  = +(s.price * (1 + s.change / 100)).toFixed(2);
+  });
+
+  let selectedSym = null;
+  let watchlist   = [];
+  let holdings    = [];
+
+  // ── RENDER CARDS ──────────────────────────────────────────────
+  function renderCards(list) {
+    const container = document.getElementById("cards");
+    container.innerHTML = "";
+    list.forEach(s => {
+      const isUp = s.change >= 0;
+      const div  = document.createElement("div");
+      div.className = "card" + (s.sym === selectedSym ? " active" : "");
+      div.innerHTML = `
+        <div class="card-sym">${s.sym}</div>
+        <div class="card-name">${s.name}</div>
+        <div class="card-price">$${s.price}</div>
+        <div class="card-change ${isUp ? "up" : "down"}">
+          ${isUp ? "▲" : "▼"} ${Math.abs(s.change)}%
+        </div>`;
+      div.onclick = () => selectStock(s.sym);
+      container.appendChild(div);
+    });
+  }
+
+  // ── SELECT STOCK ──────────────────────────────────────────────
+  function selectStock(sym) {
+    selectedSym = sym;
+    renderCards(getFilteredStocks());
+
+    // Auto-fill the P&L symbol input with stock name
+    const stock = stocks.find(s => s.sym === sym);
+    document.getElementById("plSym").value = stock.name; // show name like "Apple"
+    document.getElementById("plSym").dataset.sym = sym;  // store symbol secretly
+  }
+
+  // ── SEARCH FILTER ─────────────────────────────────────────────
+  function getFilteredStocks() {
+    const q = document.getElementById("searchInput").value.toUpperCase();
+    return stocks.filter(s => s.sym.includes(q) || s.name.toUpperCase().includes(q));
+  }
+
+  function filterCards() {
+    renderCards(getFilteredStocks());
+  }
+
+  // ── WATCHLIST ─────────────────────────────────────────────────
+  function addToWatchlist() {
+    if (!selectedSym) return alert("Click a stock card first!");
+    if (watchlist.includes(selectedSym)) return alert("Already in watchlist!");
+    watchlist.push(selectedSym);
+    renderWatchlist();
+  }
+
+  function removeFromWatchlist(sym) {
+    watchlist = watchlist.filter(s => s !== sym);
+    renderWatchlist();
+  }
+
+  function renderWatchlist() {
+    const container = document.getElementById("watchlistItems");
+    if (!watchlist.length) {
+      container.innerHTML = `<p class="empty">No stocks added yet.</p>`;
+      return;
+    }
+    container.innerHTML = watchlist.map(sym => {
+      const s   = stocks.find(x => x.sym === sym);
+      const isUp = s.change >= 0;
+      return `<div class="wl-item">
+        <span><b>${s.sym}</b> — ${s.name}</span>
+        <span class="${isUp ? "up" : "down"}">$${s.price} (${isUp ? "+" : ""}${s.change}%)</span>
+        <button class="remove-btn" onclick="removeFromWatchlist('${sym}')">Remove</button>
+      </div>`;
+    }).join("");
+  }
+
+  // ── P&L TRACKER ───────────────────────────────────────────────
+  function addHolding() {
+    const sym   = document.getElementById("plSym").dataset.sym;  // get real symbol
+    const name  = document.getElementById("plSym").value.trim(); // get display name
+    const qty   = parseFloat(document.getElementById("plQty").value);
+    const cost  = parseFloat(document.getElementById("plCost").value);
+    const stock = stocks.find(s => s.sym === sym);
+
+    if (!stock)        return alert("Click a stock card first!");
+    if (!qty || !cost) return alert("Enter quantity and buy price!");
+
+    holdings.push({ sym, name, qty, cost, currentPrice: stock.price });
+    renderPL();
+
+    document.getElementById("plSym").value       = "";
+    document.getElementById("plSym").dataset.sym = "";
+    document.getElementById("plQty").value        = "";
+    document.getElementById("plCost").value       = "";
+  }
+
+  function renderPL() {
+    const tbody = document.getElementById("plBody");
+    if (!holdings.length) {
+      tbody.innerHTML = `<tr><td colspan="5" class="empty">No holdings added.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = holdings.map((h) => {
+      const pl    = ((h.currentPrice - h.cost) * h.qty).toFixed(2);
+      const isPos = pl >= 0;
+      return `<tr>
+        <td><b>${h.name}</b><br><span style="font-size:11px;color:#94a3b8">${h.sym}</span></td>
+        <td>${h.qty}</td>
+        <td>$${h.cost}</td>
+        <td>$${h.currentPrice}</td>
+        <td class="${isPos ? "up" : "down"}">${isPos ? "+" : ""}$${pl}</td>
+      </tr>`;
+    }).join("");
+  }
+
+  // ── INIT ──────────────────────────────────────────────────────
+  renderCards(stocks);
+</script>
+</body>
+</html>
