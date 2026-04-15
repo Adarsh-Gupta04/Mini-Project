@@ -99,10 +99,10 @@ lr_model = LogisticRegression(
 
 lr_model.fit(X_train_vec, y_train)
 
-print(f"✅ LR Train Accuracy: {lr_model.score(X_train_vec, y_train):.4f}")
-print(f"✅ LR Test Accuracy: {lr_model.score(X_test_vec, y_test):.4f}")
+print(f" LR Train Accuracy: {lr_model.score(X_train_vec, y_train):.4f}")
+print(f" LR Test Accuracy: {lr_model.score(X_test_vec, y_test):.4f}")
 
-print("\n📊 Classification Report (LR):")
+print("\n Classification Report (LR):")
 print(classification_report(y_test, lr_model.predict(X_test_vec)))
 
 pickle.dump(lr_model, open(f"{SAVE_DIR}/lr_model.pkl", "wb"))
@@ -111,7 +111,7 @@ pickle.dump(tfidf, open(f"{SAVE_DIR}/tfidf.pkl", "wb"))
 # =========================
 # MODEL 2: LSTM
 # =========================
-print("\n🔧 Training LSTM...")
+print("\n Training LSTM...")
 
 tokenizer = Tokenizer(num_words=MAX_WORDS, oov_token="<OOV>")
 tokenizer.fit_on_texts(X_train)
@@ -165,7 +165,7 @@ history = model.fit(
 train_loss, train_acc = model.evaluate(X_train_seq, y_train, verbose=0)
 test_loss, test_acc = model.evaluate(X_test_seq, y_test, verbose=0)
 
-print("\n✅ LSTM Results:")
+print("\n LSTM Results:")
 print(f"Train Accuracy: {train_acc:.4f}")
 print(f"Test Accuracy: {test_acc:.4f}")
 
